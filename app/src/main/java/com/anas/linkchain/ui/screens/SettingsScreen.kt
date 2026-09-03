@@ -30,9 +30,11 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
     val acceptShare by viewModel.acceptSharedLinks.collectAsState()
     val appLock by viewModel.appLockEnabled.collectAsState()
     val lowStorage by viewModel.lowStorageWarn.collectAsState()
+    val targetPkg by viewModel.targetDownloaderPkg.collectAsState()
 
     var showPinDialog by remember { mutableStateOf(false) }
     var pinInput by remember { mutableStateOf("") }
+    var pkgInput by remember(targetPkg) { mutableStateOf(targetPkg) }
 
     Column(
         modifier = Modifier
@@ -63,6 +65,33 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                         onClick = { viewModel.setFixedQuality(q) },
                         label = { Text(q, fontSize = 11.sp) }
                     )
+                }
+            }
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("Target Downloader App (Package Name)", fontSize = 14.sp)
+            Text(
+                "Jo bhi video downloader app link receive karega, uska exact package name yahan daalo. Example: com.dvd.vd, com.videodownloader.mp4, wagaira. Package name Play Store link se ya App Info screen se mil sakta hai.",
+                fontSize = 11.sp,
+                color = DarkAccent
+            )
+            OutlinedTextField(
+                value = pkgInput,
+                onValueChange = { pkgInput = it },
+                singleLine = true,
+                placeholder = { Text("com.example.videodownloader") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                Button(
+                    onClick = { viewModel.setTargetDownloaderPkg(pkgInput.trim()) },
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("Save", fontSize = 12.sp)
                 }
             }
         }
