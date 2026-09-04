@@ -23,9 +23,14 @@ class QueueViewModel(app: Application) : AndroidViewModel(app) {
     private val historyDao = db.historyDao()
     private val prefs = (app as LinkChainApp).preferencesManager
 
-    val queueItems = queueDao.getAllItems().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-    val fixedQuality = prefs.fixedQuality.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "1080p")
-    val lowStorageWarnSetting = prefs.lowStorageWarn.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+    val queueItems = queueDao.getAllItems()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val fixedQuality = prefs.fixedQuality
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "1080p")
+
+    val lowStorageWarnSetting = prefs.lowStorageWarn
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
     private val _storageLow = MutableStateFlow(false)
     val storageLow: StateFlow<Boolean> = _storageLow.asStateFlow()
@@ -77,12 +82,42 @@ class QueueViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ── Single-item actions ────────────────────────────────────────────────
+
     fun togglePause(item: QueueItem) {
         viewModelScope.launch {
             val newStatus = if (item.status == ItemStatus.PAUSED) ItemStatus.PENDING else ItemStatus.PAUSED
             queueDao.updateStatus(item.id, newStatus)
         }
     }
+
+    fun deleteItem(item: QueueItem) {
+        viewModelScope.launch {
+            queueDao.deleteById(item.id)
+        }
+    }
+
+    // ── Multi-select bulk actions ──────────────────────────────────────────
+
+    fun deleteItems(ids: List<Long>) {
+        viewModelScope.launch {
+            for (id in ids) queueDao.deleteById(id)
+        }
+    }
+
+    fun pauseItems(ids: List<Long>) {
+        viewModelScope.launch {
+            for (id in ids) queueDao.updateStatus(id, ItemStatus.PAUSED)
+        }
+    }
+
+    fun resumeItems(ids: List<Long>) {
+        viewModelScope.launch {
+            for (id in ids) queueDao.updateStatus(id, ItemStatus.PENDING)
+        }
+    }
+
+    // ── Batch start ───────────────────────────────────────────────────────
 
     fun startBatch() {
         val context = getApplication<Application>()

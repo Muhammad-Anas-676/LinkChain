@@ -21,12 +21,21 @@ class LinkChainNotificationListener : NotificationListenerService() {
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         val notification = sbn?.notification ?: return
         val pkg = sbn.packageName ?: return
+
+        // Only watch notifications from the configured downloader package
+        val targetPkg = LinkChainAccessibilityService.currentTargetPackage
+        if (pkg != targetPkg) return
+
         val extras = notification.extras ?: return
         val title = extras.getString("android.title") ?: ""
-        val text = extras.getCharSequence("android.text")?.toString() ?: ""
-
+        val text  = extras.getCharSequence("android.text")?.toString() ?: ""
         val combined = "$title $text".lowercase()
-        if (combined.contains(TargetDownloaderConfig.NOTIF_COMPLETION_PHRASE)) {
+
+        // Match any of the known completion phrases
+        val completed = TargetDownloaderConfig.NOTIF_COMPLETION_PHRASES
+            .any { phrase -> combined.contains(phrase) }
+
+        if (completed) {
             _completionEvents.tryEmit(pkg)
         }
     }

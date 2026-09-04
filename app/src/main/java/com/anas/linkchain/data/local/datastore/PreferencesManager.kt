@@ -31,7 +31,7 @@ class PreferencesManager(private val context: Context) {
     val acceptSharedLinks: Flow<Boolean> = context.dataStore.data.map { it[ACCEPT_SHARED_LINKS] ?: true }
     val appLockEnabled: Flow<Boolean> = context.dataStore.data.map { it[APP_LOCK_ENABLED] ?: false }
     val pinHash: Flow<String> = context.dataStore.data.map { it[PIN_HASH] ?: "" }
-    val targetDownloaderPackage: Flow<String> = context.dataStore.data.map { it[TARGET_DOWNLOADER_PACKAGE] ?: "" }
+    val targetDownloaderPackage: Flow<String> = context.dataStore.data.map { it[TARGET_DOWNLOADER_PACKAGE] ?: "video.downloader.videodownloader" }
     val lowStorageWarn: Flow<Boolean> = context.dataStore.data.map { it[LOW_STORAGE_WARN] ?: true }
     val downloadFolderUri: Flow<String> = context.dataStore.data.map { it[DOWNLOAD_FOLDER_URI] ?: "" }
 

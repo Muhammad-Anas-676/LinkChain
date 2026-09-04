@@ -72,7 +72,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("Target Downloader App (Package Name)", fontSize = 14.sp)
             Text(
-                "Jo bhi video downloader app link receive karega, uska exact package name yahan daalo. Example: com.dvd.vd, com.videodownloader.mp4, wagaira. Package name Play Store link se ya App Info screen se mil sakta hai.",
+                "Jo bhi video downloader app link receive karega, uska exact package name yahan daalo. Example: video.downloader.videodownloader (InShot Video Downloader). Package name Play Store link se ya App Info screen se mil sakta hai.",
                 fontSize = 11.sp,
                 color = DarkAccent
             )
@@ -80,7 +80,7 @@ fun SettingsScreen(viewModel: SettingsViewModel) {
                 value = pkgInput,
                 onValueChange = { pkgInput = it },
                 singleLine = true,
-                placeholder = { Text("com.example.videodownloader") },
+                placeholder = { Text("video.downloader.videodownloader") },
                 modifier = Modifier.fillMaxWidth()
             )
             Row(

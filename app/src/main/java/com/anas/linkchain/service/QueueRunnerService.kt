@@ -41,6 +41,12 @@ class QueueRunnerService : Service() {
             while (currentItem != null && isRunning) {
                 val item = currentItem
 
+                // Skip paused items
+                if (item.status == ItemStatus.PAUSED) {
+                    currentItem = queueDao.getNextPending()
+                    continue
+                }
+
                 val wifiOnly = prefs.wifiOnly.first()
                 if (wifiOnly && !isWifiConnected()) {
                     updateNotification("Paused: Waiting for Wi-Fi", item.url)
@@ -48,15 +54,24 @@ class QueueRunnerService : Service() {
                     continue
                 }
 
-                queueDao.updateStatus(item.id, ItemStatus.DOWNLOADING)
-                updateNotification("Downloading: ${item.platform.name}", item.url)
-
                 val targetPkg = prefs.targetDownloaderPackage.first().ifBlank {
                     TargetDownloaderConfig.DEFAULT_PACKAGE
                 }
+
+                queueDao.updateStatus(item.id, ItemStatus.DOWNLOADING)
+                updateNotification("Downloading: ${item.platform.name}", item.url)
+
+                // Tell the Accessibility Service which URL to handle next
+                LinkChainAccessibilityService.pendingUrl = item.url
+                LinkChainAccessibilityService.currentTargetPackage = targetPkg
+
+                // Launch the downloader – AccessibilityService will paste URL + click download
                 launchDownloader(targetPkg, item.url)
 
                 val success = waitForCompletionOrTimeout(180_000L)
+
+                // Clear any leftover pending signal
+                LinkChainAccessibilityService.pendingUrl = null
 
                 if (success) {
                     historyDao.insert(
@@ -75,12 +90,22 @@ class QueueRunnerService : Service() {
                 currentItem = queueDao.getNextPending()
             }
 
+            // Retry failed items once
             val failedList = queueDao.getAllFailed()
             for (failed in failedList) {
+                val targetPkg = prefs.targetDownloaderPackage.first().ifBlank {
+                    TargetDownloaderConfig.DEFAULT_PACKAGE
+                }
                 queueDao.updateStatus(failed.id, ItemStatus.DOWNLOADING)
                 updateNotification("Retrying item...", failed.url)
-                launchDownloader(TargetDownloaderConfig.DEFAULT_PACKAGE, failed.url)
+
+                LinkChainAccessibilityService.pendingUrl = failed.url
+                LinkChainAccessibilityService.currentTargetPackage = targetPkg
+                launchDownloader(targetPkg, failed.url)
+
                 val success = waitForCompletionOrTimeout(180_000L)
+                LinkChainAccessibilityService.pendingUrl = null
+
                 historyDao.insert(
                     HistoryItem(
                         url = failed.url,
@@ -98,6 +123,9 @@ class QueueRunnerService : Service() {
     }
 
     private fun launchDownloader(packageName: String, url: String) {
+        // Share the URL to the target downloader. The AccessibilityService
+        // will intercept the window and automate the actual download action
+        // so no human interaction with the downloader UI is required.
         val shareIntent = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
             putExtra(Intent.EXTRA_TEXT, url)
@@ -150,6 +178,7 @@ class QueueRunnerService : Service() {
         super.onDestroy()
         serviceScope.cancel()
         isRunning = false
+        LinkChainAccessibilityService.pendingUrl = null
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
